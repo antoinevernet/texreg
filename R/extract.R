@@ -3702,7 +3702,7 @@ extract.zelig <- function(model, include.aic = TRUE, include.bic = TRUE,
   
   s <- summary(model, ...)
   
-  if ("relogit" %in% class(model) || "logit" %in% class(model) || 
+  if ("relogit" %in% class(model) || "Zelig-relogit" %in% class(model) || "logit" %in% class(model) || 
       "ls" %in% class(model) || "probit" %in% class(model) || 
       "ologit" %in% class(model)) {
     coefficient.names <- rownames(s$coef)
