@@ -3868,7 +3868,7 @@ extract.zelig <- function(model, include.aic = TRUE, include.bic = TRUE,
   }
 }
 
-setMethod("extract", signature = className("zelig", "Zelig"), 
+setMethod("extract", signature = className("zelig", "Zelig", "Zelig-relogit"), 
     definition = extract.zelig)
 
 
