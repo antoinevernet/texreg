@@ -3877,7 +3877,7 @@ extract.zelig5 <- function(model, include.aic = TRUE, include.bic = TRUE,
                           include.loglik = TRUE, include.deviance = TRUE, include.nobs = TRUE, 
                           include.rsquared = TRUE, include.adjrs = TRUE, include.fstatistic = TRUE, 
                           ...) {
-  
+  model$show()
   s <- model$summary#summary(model, ...)
   
   if ("Zelig-relogit" %in% class(model) || "Zelig-logit" %in% class(model) || 
