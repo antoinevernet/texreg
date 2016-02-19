@@ -3702,7 +3702,7 @@ extract.zelig <- function(model, include.aic = TRUE, include.bic = TRUE,
   
   s <- summary(model, ...)
   
-  if ("relogit" %in% class(model) || "Zelig-relogit" %in% class(model) || "logit" %in% class(model) || 
+  if ("relogit" %in% class(model) || "logit" %in% class(model) || 
       "ls" %in% class(model) || "probit" %in% class(model) || 
       "ologit" %in% class(model)) {
     coefficient.names <- rownames(s$coef)
@@ -3868,8 +3868,185 @@ extract.zelig <- function(model, include.aic = TRUE, include.bic = TRUE,
   }
 }
 
-setMethod("extract", signature = className("zelig", "Zelig", "Zelig-relogit"), 
+setMethod("extract", signature = className("zelig", "Zelig"), 
     definition = extract.zelig)
+#This seems to only work for Zelig version up to and excluding 5.0
+
+# Below is a try for extract for Zelig relogit in version 5 and up.
+extract.zelig5 <- function(model, include.aic = TRUE, include.bic = TRUE, 
+                          include.loglik = TRUE, include.deviance = TRUE, include.nobs = TRUE, 
+                          include.rsquared = TRUE, include.adjrs = TRUE, include.fstatistic = TRUE, 
+                          ...) {
+  
+  s <- z.out1$summary#summary(model, ...)
+  
+  if ("Zelig-relogit" %in% class(model) || "Zelig-logit" %in% class(model) || 
+      "Zelig-ls" %in% class(model) || "Zelig-probit" %in% class(model) || 
+      "Zelig-ologit" %in% class(model)) {
+    coefficient.names <- rownames(s$coef)
+    coefficients <- s$coef[, 1]
+    standard.errors <- s$coef[, 2]
+    if ("Zelig-ologit" %in% class(model)) {
+      tval <- s$coef[, 3]
+      significance <- 2 * pt(-abs(tval), s$df.residual)
+    } else {
+      significance <- s$coef[, 4]
+    }
+    gof <- numeric()
+    gof.names <- character()
+    gof.decimal <- logical()
+    if (include.aic == TRUE) {
+      aic <- s$aic
+      gof <- c(gof, aic)
+      gof.names <- c(gof.names, "AIC")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.bic == TRUE) {
+      bic <- -9999
+      gof <- c(gof, bic)
+      gof.names <- c(gof.names, "BIC")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.loglik == TRUE) {
+      lik <- -9999#logLik(model)[1]
+      gof <- c(gof, lik)
+      gof.names <- c(gof.names, "Log Likelihood")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.deviance == TRUE) {
+      dev <- s$deviance
+      if (!is.null(dev)) {
+        gof <- c(gof, dev)
+        gof.names <- c(gof.names, "Deviance")
+        gof.decimal <- c(gof.decimal, TRUE)
+      }
+    }
+    if (include.nobs == TRUE) {
+      n <- nrow(model$data)
+      gof <- c(gof, n)
+      gof.names <- c(gof.names, "Num.\ obs.")
+      gof.decimal <- c(gof.decimal, FALSE)
+    }
+    if (include.rsquared == TRUE) {
+      rs <- s$r.squared  #extract R-squared
+      if (!is.null(rs)) {
+        gof <- c(gof, rs)
+        gof.names <- c(gof.names, "R$^2$")
+        gof.decimal <- c(gof.decimal, TRUE)
+      }
+    }
+    if (include.adjrs == TRUE) {
+      adj <- s$adj.r.squared  #extract adjusted R-squared
+      if (!is.null(adj)) {
+        gof <- c(gof, adj)
+        gof.names <- c(gof.names, "Adj.\ R$^2$")
+        gof.decimal <- c(gof.decimal, TRUE)
+      }
+    }
+    if (include.fstatistic == TRUE) {
+      fstat <- s$fstatistic[[1]]
+      if (!is.null(fstat)) {
+        gof <- c(gof, fstat)
+        gof.names <- c(gof.names, "F statistic")
+        gof.decimal <- c(gof.decimal, TRUE)
+      }
+    }
+    
+    tr <- createTexreg(
+      coef.names = coefficient.names, 
+      coef = coefficients, 
+      se = standard.errors, 
+      pvalues = significance, 
+      gof.names = gof.names, 
+      gof = gof, 
+      gof.decimal = gof.decimal
+    )
+    return(tr)
+  } else if ("Zelig-mlogit" %in% class(model)) {
+    coefficient.names <- rownames(s@coef3)
+    coefficients <- s@coef3[, 1]
+    standard.errors <- s@coef3[, 2]
+    zval <- s@coef3[, 3]
+    significance <- 2 * pnorm(abs(zval), lower.tail = FALSE)
+    
+    gof <- numeric()
+    gof.names <- character()
+    gof.decimal <- logical()
+    if (include.loglik == TRUE) {
+      lik <- logLik(model)[1]
+      gof <- c(gof, lik)
+      gof.names <- c(gof.names, "Log Likelihood")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.deviance == TRUE) {
+      dev <- deviance(s)
+      if (!is.null(dev)) {
+        gof <- c(gof, dev)
+        gof.names <- c(gof.names, "Deviance")
+        gof.decimal <- c(gof.decimal, TRUE)
+      }
+    }
+    if (include.nobs == TRUE) {
+      n <- nrow(model$data)
+      gof <- c(gof, n)
+      gof.names <- c(gof.names, "Num.\ obs.")
+      gof.decimal <- c(gof.decimal, FALSE)
+    }
+    
+    tr <- createTexreg(
+      coef.names = coefficient.names, 
+      coef = coefficients, 
+      se = standard.errors, 
+      pvalues = significance, 
+      gof.names = gof.names, 
+      gof = gof, 
+      gof.decimal = gof.decimal
+    )
+    return(tr)
+  } else if ("Zelig-tobit" %in% class(model)) {
+    coefficient.names <- rownames(s$table)
+    coefficients <- s$table[, 1]
+    standard.errors <- s$table[, 2]
+    significance <- s$table[, 5]
+    gof <- numeric()
+    gof.names <- character()
+    gof.decimal <- logical()
+    if (include.aic == TRUE) {
+      aic <- AIC(model)
+      gof <- c(gof, aic)
+      gof.names <- c(gof.names, "AIC")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.bic == TRUE) {
+      bic <- BIC(model)
+      gof <- c(gof, bic)
+      gof.names <- c(gof.names, "BIC")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.loglik == TRUE) {
+      lik <- logLik(model)[1]
+      gof <- c(gof, lik)
+      gof.names <- c(gof.names, "Log Likelihood")
+      gof.decimal <- c(gof.decimal, TRUE)
+    }
+    if (include.nobs == TRUE) {
+      n <- nrow(model$data)
+      gof <- c(gof, n)
+      gof.names <- c(gof.names, "Num.\ obs.")
+      gof.decimal <- c(gof.decimal, FALSE)
+    }
+    tr <- createTexreg(coef.names = coefficient.names, coef = coefficients, 
+                       se = standard.errors, pvalues = significance, gof.names = gof.names, 
+                       gof = gof, gof.decimal = gof.decimal)
+    return(tr)
+  } else {
+    stop(paste("Only the following Zelig models are currently supported:", 
+               "logit, ls, mlogit, ologit, probit, relogit, tobit."))
+  }
+}
+
+setMethod("extract", signature = className("Zelig", "Zelig"), 
+          definition = extract.zelig5)
 
 
 # extension for zeroinfl objects (pscl package)
